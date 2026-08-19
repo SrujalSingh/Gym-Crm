@@ -1,0 +1,4 @@
+{
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(dashboard)/superadmin/page": "app/(dashboard)/superadmin/page.js"
+}
