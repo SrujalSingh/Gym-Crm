@@ -74,6 +74,51 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [auditLogsList, setAuditLogsList] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [featuresList, setFeaturesList] = useState<GymFeature[]>(INITIAL_FEATURES);
 
+  // Read saved data collections from localStorage on client mount
+  useEffect(() => {
+    try {
+      const savedGyms = localStorage.getItem('nestbeans_gyms');
+      if (savedGyms) setGymsList(JSON.parse(savedGyms));
+
+      const savedMembers = localStorage.getItem('nestbeans_members');
+      if (savedMembers) setMembersList(JSON.parse(savedMembers));
+
+      const savedPlans = localStorage.getItem('nestbeans_plans');
+      if (savedPlans) setPlansList(JSON.parse(savedPlans));
+
+      const savedAttendance = localStorage.getItem('nestbeans_attendance');
+      if (savedAttendance) setAttendanceList(JSON.parse(savedAttendance));
+
+      const savedPayments = localStorage.getItem('nestbeans_payments');
+      if (savedPayments) setPaymentsList(JSON.parse(savedPayments));
+
+      const savedStaff = localStorage.getItem('nestbeans_staff');
+      if (savedStaff) setStaffList(JSON.parse(savedStaff));
+
+      const savedEnquiries = localStorage.getItem('nestbeans_enquiries');
+      if (savedEnquiries) setEnquiriesList(JSON.parse(savedEnquiries));
+
+      const savedExpenses = localStorage.getItem('nestbeans_expenses');
+      if (savedExpenses) setExpensesList(JSON.parse(savedExpenses));
+
+      const savedAudit = localStorage.getItem('nestbeans_audit');
+      if (savedAudit) setAuditLogsList(JSON.parse(savedAudit));
+    } catch (e) {
+      console.error('Error reading localStorage persistence:', e);
+    }
+  }, []);
+
+  // Synchronize state to localStorage whenever collections change
+  useEffect(() => { try { localStorage.setItem('nestbeans_gyms', JSON.stringify(gymsList)); } catch {} }, [gymsList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_members', JSON.stringify(membersList)); } catch {} }, [membersList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_plans', JSON.stringify(plansList)); } catch {} }, [plansList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_attendance', JSON.stringify(attendanceList)); } catch {} }, [attendanceList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_payments', JSON.stringify(paymentsList)); } catch {} }, [paymentsList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_staff', JSON.stringify(staffList)); } catch {} }, [staffList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_enquiries', JSON.stringify(enquiriesList)); } catch {} }, [enquiriesList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_expenses', JSON.stringify(expensesList)); } catch {} }, [expensesList]);
+  useEffect(() => { try { localStorage.setItem('nestbeans_audit', JSON.stringify(auditLogsList)); } catch {} }, [auditLogsList]);
+
   // Active gym scope for logged in admin/staff or superadmin impersonation
   const activeGymId = profile?.role === 'superadmin' && impersonatedGym 
     ? impersonatedGym.id 

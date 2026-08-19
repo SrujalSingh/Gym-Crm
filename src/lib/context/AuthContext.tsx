@@ -34,14 +34,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [impersonatedGym, setImpersonatedGym] = useState<Gym | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Read saved session from localStorage on client mount
+  // Read saved profiles, gyms, and session from localStorage on client mount
   useEffect(() => {
-    const saved = localStorage.getItem('gym_crm_active_profile_id');
-    if (saved) {
-      const found = profilesList.find((p) => p.id === saved);
-      if (found) setProfile(found);
+    try {
+      const savedProfiles = localStorage.getItem('nestbeans_profiles');
+      if (savedProfiles) {
+        setProfilesList(JSON.parse(savedProfiles));
+      }
+
+      const savedGyms = localStorage.getItem('nestbeans_gyms');
+      if (savedGyms) {
+        setGymsList(JSON.parse(savedGyms));
+      }
+
+      const savedSession = localStorage.getItem('gym_crm_active_profile_id');
+      if (savedSession) {
+        const activeProfiles = savedProfiles ? JSON.parse(savedProfiles) : INITIAL_PROFILES;
+        const found = activeProfiles.find((p: Profile) => p.id === savedSession);
+        if (found) setProfile(found);
+      }
+    } catch (e) {
+      console.error('Error loading session from localStorage:', e);
     }
   }, []);
+
+  // Synchronize localStorage when profilesList changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('nestbeans_profiles', JSON.stringify(profilesList));
+    } catch {}
+  }, [profilesList]);
+
+  // Synchronize localStorage when gymsList changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('nestbeans_gyms', JSON.stringify(gymsList));
+    } catch {}
+  }, [gymsList]);
 
   // Synchronize localStorage when profile changes
   useEffect(() => {
@@ -52,12 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [profile]);
 
-  // Current gym determined strictly from user profile (searches dynamic gyms list first, with fallback object if newly added)
+  // Current gym determined strictly from user profile
   const currentGym = React.useMemo(() => {
     if (!profile?.gym_id) return null;
     const found = gymsList.find((g) => g.id === profile.gym_id);
     if (found) return found;
-    // Fallback gym object if newly added gym ID
     return {
       id: profile.gym_id,
       name: profile.full_name ? profile.full_name.replace(/Admin|Staff/g, '').trim() || 'Active Gym' : 'Gym Workspace',
@@ -106,9 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const target = profilesList.find((p) => p.email.toLowerCase() === email.toLowerCase());
     if (target) {
       setProfile(target);
-      setImpersonatedGym(null);
+      setImpersonatedGym(null); // Reset impersonation on login
     }
-    setTimeout(() => setIsLoading(false), 200);
+    setIsLoading(false);
   };
 
   const impersonateGym = (gym: Gym | null) => {
@@ -123,33 +151,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addOrUpdateProfile: AuthContextType['addOrUpdateProfile'] = (data) => {
-    const existingIndex = profilesList.findIndex((p) => p.id === data.id || p.email.toLowerCase() === data.email.toLowerCase());
-    
-    if (existingIndex >= 0) {
-      const updated = {
-        ...profilesList[existingIndex],
-        ...data,
+    if (data.id) {
+      // Update existing profile credentials
+      setProfilesList((prev) =>
+        prev.map((p) => (p.id === data.id ? { ...p, ...data, updated_at: new Date().toISOString() } : p))
+      );
+      const updated = profilesList.find((p) => p.id === data.id)!;
+      return updated;
+    } else {
+      // Create new profile
+      const newProf: Profile = {
+        id: `prof-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        auth_user_id: `auth-${Date.now()}`,
+        gym_id: data.gym_id,
+        full_name: data.full_name,
+        email: data.email,
+        password: data.password || 'Pass@123',
+        phone: data.phone,
+        role: data.role,
+        status: data.status || 'active',
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      setProfilesList((prev) => prev.map((p, idx) => (idx === existingIndex ? updated : p)));
-      return updated;
+      setProfilesList((prev) => [...prev, newProf]);
+      return newProf;
     }
-
-    const newProf: Profile = {
-      ...data,
-      id: data.id || `p-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      auth_user_id: `u-${Date.now()}`,
-      status: data.status || 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    setProfilesList((prev) => [...prev, newProf]);
-    return newProf;
   };
 
-  const addDynamicGym: AuthContextType['addDynamicGym'] = (gym) => {
-    setGymsList((prev) => [...prev.filter((g) => g.id !== gym.id), gym]);
+  const addDynamicGym = (newGym: Gym) => {
+    setGymsList((prev) => {
+      if (prev.some((g) => g.id === newGym.id)) return prev;
+      return [...prev, newGym];
+    });
   };
 
   return (
