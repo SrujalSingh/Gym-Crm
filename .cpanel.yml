@@ -2,4 +2,5 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/hzpqipdi/gym.nestbeans.com/
+    - /bin/cp -R .next $DEPLOYPATH
     - /bin/cp -R * $DEPLOYPATH
